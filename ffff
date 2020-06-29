@@ -1,0 +1,100 @@
+# -*- coding: utf-8 -*-
+import time
+import random
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium import webdriver
+from selenium.webdriver.common.proxy import *
+# import threading
+import concurrent.futures
+from fake_useragent import UserAgent
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+'''
+check proxy live
+close driver when done
+check pageload done or not (quit)
+msg-agent
+msg-client
+- check Chat-again
+- check system-msaage
+- Mỗi proxy sẽ lưu 1 file chát
+
+https://proxyscrape.com/free-proxy-list (OK)
+'''
+MAX_WORKERS =3
+T_PROXY = 'main_proxy.txt'
+LINKYOUTUBE = 'https://www.youtube.com/watch?v=1NTsZ3Isfk0'
+
+ses_random = random.randint(1, 10000000000000000000000)
+
+
+def random_line(afile):
+    line = next(afile)
+    for num, aline in enumerate(afile, 2):
+        if random.randrange(num): continue
+        line = aline
+    return line
+
+
+# ----------------------------
+def get_proxys(data_file):
+    proxys = []
+    with open(data_file, "r") as filedoc:
+        for line in filedoc.readlines():
+            line = line.strip()
+            if not line:
+                continue
+            prox = line.split(":")
+            ip = prox[0]
+            port = int(prox[1])
+            proxys.append((ip, port))
+    return proxys
+
+def tam_dung(a,b):
+    time.sleep(random.randint(a,b))
+    
+    
+def e(ip, port):
+    profile = webdriver.FirefoxProfile()
+    profile.set_preference("general.useragent.override", UserAgent(verify_ssl=False).random)
+    profile.update_preferences()
+    profile.set_preference("network.proxy.type", 1)
+    profile.set_preference("network.proxy.http", ip)
+    profile.set_preference("network.proxy.http_port", int(port))
+    profile.set_preference("network.proxy.ssl", ip)
+    profile.set_preference("network.proxy.ssl_port", int(port))
+    try:
+        driver = webdriver.Firefox(firefox_profile=profile)
+        driver.get(LINKYOUTUBE)
+        driver.set_page_load_timeout(30)         
+        autoplay = driver.find_element_by_xpath("//button[@aria-label='Phát (k)']")
+        autoplay.click()
+        tam_dung(200,250)
+        driver.quit()
+
+    except:
+        print("Connection Error")
+        driver.quit()
+    else:
+        time.sleep(random.randint(1, 7))
+        driver.quit()
+
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+    proxys = get_proxys(T_PROXY)
+    tasks = {executor.submit(e, proxy[0], proxy[1]): proxy for proxy in proxys}
+    for task in concurrent.futures.as_completed(tasks):
+        proxy = tasks[task]
+        try:
+            data = task.result()
+
+        except Exception as exc:
+            print('{} generated an exception: {}'.format(proxy, exc))
+        else:
+            print('{} completed successfully'.format(proxy))
+            time.sleep(10)
